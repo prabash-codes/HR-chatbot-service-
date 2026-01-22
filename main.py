@@ -61,7 +61,7 @@ def get_ai_response(user_id: str, question: str):
 
         # D. GENERATE: Construct the message list for GPT-4o
         messages = [
-            {"role": "system", "content": "You are a professional HR Assistant. Answer questions based ONLY on the provided context and conversation history."}
+            {"role": "system", "content": "You are a professional HR Assistant. Answer questions based ONLY on the provided context and conversation history. Please keep all answers as brief as possible unless the user requests a more descriptive response."}
         ]
         messages.extend(history)
         messages.append({"role": "user", "content": f"Context from Policies:\n{context_text}\n\nUser Question: {question}"})
