@@ -1,56 +1,42 @@
 import streamlit as st
 import requests
 
-# Page Configuration
-st.set_page_config(page_title="McLarens HR Assistant", page_icon="🏢", layout="centered")
+st.set_page_config(page_title="HR Chatbot", page_icon="🏢")
 
-# Custom Styling
-st.markdown("""
-    <style>
-    .stChatMessage { border-radius: 15px; margin-bottom: 10px; }
-    .stApp { background-color: #0739a6; }
-    </style>
-""", unsafe_allow_html=True)
+# 1. IDENTITY: Use official headers for Azure Authentication [cite: 81]
+user_id = st.context.headers.get("X-Ms-Client-Principal-Name")
 
-st.title("🏢 McLarens HR Assistant")
-st.caption("Ask me anything about company policies, medical OPD, or leave procedures.")
+# Fallback for local testing
+if not user_id:
+    user_id = st.sidebar.text_input("User ID (Testing)", value="test_user")
 
-# Sidebar for User Settings
-with st.sidebar:
-    st.header("Settings")
-    user_id = st.text_input("User ID", value="ushara_test")
-    if st.button("Clear Chat History"):
-        st.session_state.messages = []
+st.sidebar.write(f"Logged in as: {user_id}")
 
-# Initialize Chat History
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display existing chat messages
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-# Chat Input
-if prompt := st.chat_input("How can I help you today?"):
-    # Display user message
+if prompt := st.chat_input("Ask about HR policies..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Call your FastAPI Backend
-    with st.chat_message("assistant"):
-        with st.spinner("Searching policies..."):
-            try:
-                response = requests.post(
-                    "http://127.0.0.1:8000/chat",
-                    json={"user_id": user_id, "question": prompt}
-                )
-                if response.status_code == 200:
-                    answer = response.json().get("answer")
-                    st.markdown(answer)
-                    st.session_state.messages.append({"role": "assistant", "content": answer})
-                else:
-                    st.error(f"Error: {response.status_code}")
-            except Exception as e:
-                st.error(f"Could not connect to backend: {e}")
+    # 2. POST REQUEST
+    try:
+        # Update with your new backend URL
+        backend_url = "https://hr-chatbot-backendservice.azurewebsites.net/chat"
+        payload = {"user_id": user_id, "question": prompt}
+        
+        res = requests.post(backend_url, json=payload, timeout=60)
+        if res.status_code == 200:
+            answer = res.json()["answer"]
+            with st.chat_message("assistant"):
+                st.markdown(answer)
+            st.session_state.messages.append({"role": "assistant", "content": answer})
+        else:
+            st.error(f"Error: {res.text}")
+    except Exception as e:
+        st.error(f"Connection Failed: {e}")
